@@ -177,7 +177,7 @@ function Header({ role }: { role: Role }) {
     <header className="sticky top-0 z-30 border-b border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.02)]">
       <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-6 py-3 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <span className="text-sm font-bold">A</span>
           </div>
           <div className="leading-none">
@@ -204,7 +204,7 @@ function Header({ role }: { role: Role }) {
             <Bell className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[oklch(0.6_0.05_250)] to-[oklch(0.4_0.05_280)] text-[11px] font-semibold text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#0979b0] to-[#0cb7f2] text-[11px] font-semibold text-white">
               SR
             </div>
             <div className="leading-tight">
@@ -275,10 +275,10 @@ function QuickCards({
             onClick={() => onFilter(c.filter === activeFilter ? null : c.filter)}
             className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200 ${
               isPrimary
-                ? "border-foreground bg-foreground text-background hover:opacity-95"
+                ? "border-primary bg-primary text-primary-foreground hover:opacity-95"
                 : isActive
-                  ? "border-foreground bg-card shadow-sm"
-                  : "border-border bg-card hover:border-foreground/30 hover:shadow-sm"
+                  ? "border-primary bg-card shadow-sm"
+                  : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
             }`}
           >
             <div className="flex items-start justify-between">
@@ -313,7 +313,7 @@ function QuickCards({
 
 function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) {
   return (
-    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-foreground/20 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -344,7 +344,7 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
         </div>
         <button
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-foreground hover:bg-foreground hover:text-background"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary hover:bg-primary hover:text-primary-foreground"
         >
           Ver Detalhes e Mensagens
           <ChevronRight className="h-3.5 w-3.5" />
