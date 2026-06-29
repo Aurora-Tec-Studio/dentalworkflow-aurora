@@ -145,17 +145,18 @@ function Index() {
 function RoleSwitcher({ role, onChange }: { role: Role; onChange: (r: Role) => void }) {
   const roles: Role[] = ["MODERADOR", "DENTISTA", "PROTETICO"];
   return (
-    <div className="border-b border-border bg-[oklch(0.97_0.002_247)]">
-      <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-6 py-2 lg:px-10">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Modo de simulação
+    <div className="border-b border-border/60 bg-card/70 backdrop-blur">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-end gap-2 px-6 py-1.5 lg:px-10">
+        <span className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+          <span className="h-1 w-1 rounded-full bg-[#0cb7f2]" />
+          Dev · perfil
         </span>
-        <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+        <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-background/60 p-0.5">
           {roles.map((r) => (
             <button
               key={r}
               onClick={() => onChange(r)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide transition ${
                 role === r
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -165,9 +166,6 @@ function RoleSwitcher({ role, onChange }: { role: Role; onChange: (r: Role) => v
             </button>
           ))}
         </div>
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          MVP — alterne perfis para inspecionar permissões e fluxos
-        </span>
       </div>
     </div>
   );
