@@ -311,8 +311,18 @@ function QuickCards({
 }
 
 function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) {
+  const isAlert = order.status === "ajuste";
   return (
-    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+    <div
+      className={`group relative rounded-2xl border bg-card p-5 transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)] ${
+        isAlert
+          ? "border-[#f5a26333] bg-[linear-gradient(180deg,#fff8f3_0%,#ffffff_55%)] shadow-[0_0_0_1px_rgba(245,162,99,0.18)]"
+          : "border-border hover:border-primary/25"
+      }`}
+    >
+      {isAlert && (
+        <span className="absolute left-0 top-5 h-8 w-[3px] rounded-r-full bg-[#f59e0b]" />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -333,13 +343,13 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
       </div>
 
       <div className="mt-5">
-        <Stepper current={order.step} />
+        <Stepper current={order.step} alert={isAlert} />
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5" />
-          <span>3 mensagens · última há 12 min</span>
+          <span>{order.messages}</span>
         </div>
         <button
           onClick={onOpen}
@@ -353,7 +363,8 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
   );
 }
 
-function Stepper({ current }: { current: StepIndex }) {
+function Stepper({ current, alert = false }: { current: StepIndex; alert?: boolean }) {
+  const activeColor = alert ? "#f59e0b" : "#0cb7f2";
   return (
     <div className="flex items-center">
       {STEPS.map((label, i) => {
@@ -367,14 +378,23 @@ function Stepper({ current }: { current: StepIndex }) {
                   done
                     ? "border-[#0979b0] bg-[#0979b0]"
                     : active
-                      ? "border-[#0cb7f2] bg-[#0cb7f2]"
+                      ? "animate-pulse"
                       : "border-border bg-card"
                 }`}
+                style={
+                  active
+                    ? {
+                        borderColor: activeColor,
+                        backgroundColor: activeColor,
+                        boxShadow: `0 0 0 4px ${activeColor}33`,
+                      }
+                    : undefined
+                }
               >
                 {done ? (
                   <CheckCircle2 className="h-3 w-3 text-white" strokeWidth={3} />
                 ) : active ? (
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
                 ) : (
                   <span className="h-1.5 w-1.5 rounded-full bg-border" />
                 )}
