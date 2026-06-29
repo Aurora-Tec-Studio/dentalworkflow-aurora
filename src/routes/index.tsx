@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   Search,
   Bell,
@@ -22,7 +22,9 @@ import {
   History,
   MessageSquare,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
+import { getSession, logout, type AuthSession } from "../lib/auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -76,20 +78,56 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 function Index() {
+  const navigate = useNavigate();
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [role, setRole] = useState<Role>("MODERADOR");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [openCase, setOpenCase] = useState<CaseOrder | null>(null);
   const [chatTarget, setChatTarget] = useState<"DENTISTA" | "PROTETICO">("DENTISTA");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+
+  useEffect(() => {
+    const s = getSession();
+    if (!s) {
+      navigate({ to: "/login" });
+    } else {
+      setSession(s);
+      // Define o perfil baseado na sessão
+      if (s.role === "DENTISTA") setRole("DENTISTA");
+      else if (s.role === "PROTETICO") setRole("PROTETICO");
+      else setRole("MODERADOR");
+    }
+  }, [navigate]);
+
+  function handleLogout() {
+    logout();
+    navigate({ to: "/login" });
+  }
 
   const filteredOrders = useMemo(() => {
-    if (!activeFilter) return ORDERS;
-    return ORDERS.filter((o) => o.status === activeFilter);
-  }, [activeFilter]);
+    let orders = ORDERS;
+    if (activeFilter) {
+      orders = orders.filter((o) => o.status === activeFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      orders = orders.filter(
+        (o) =>
+          o.patient.toLowerCase().includes(q) ||
+          o.dentist.toLowerCase().includes(q) ||
+          o.lab.toLowerCase().includes(q) ||
+          o.id.toLowerCase().includes(q) ||
+          o.type.toLowerCase().includes(q)
+      );
+    }
+    return orders;
+  }, [activeFilter, searchQuery]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <RoleSwitcher role={role} onChange={(r) => { setRole(r); setActiveFilter(null); }} />
-      <Header role={role} />
+      <Header role={role} session={session} onLogout={handleLogout} searchQuery={searchQuery} onSearch={setSearchQuery} />
       <main className="mx-auto max-w-[1400px] px-6 py-8 lg:px-10">
         <section className="mb-8">
           <div className="mb-5 flex items-end justify-between">
@@ -99,16 +137,16 @@ function Index() {
                 Acompanhe pedidos, fluxos de produção e mensageria em tempo real.
               </p>
             </div>
-            {activeFilter && (
+            {(activeFilter || searchQuery) && (
               <button
-                onClick={() => setActiveFilter(null)}
+                onClick={() => { setActiveFilter(null); setSearchQuery(""); }}
                 className="text-xs font-medium text-muted-foreground transition hover:text-foreground"
               >
-                Limpar filtro ✕
+                Limpar filtros
               </button>
             )}
           </div>
-          <QuickCards role={role} activeFilter={activeFilter} onFilter={setActiveFilter} />
+          <QuickCards role={role} activeFilter={activeFilter} onFilter={setActiveFilter} onNewOrder={() => setShowNewOrderModal(true)} />
         </section>
 
         <section>
@@ -122,7 +160,7 @@ function Index() {
             ))}
             {filteredOrders.length === 0 && (
               <div className="rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
-                Nenhum pedido neste filtro.
+                {searchQuery ? `Nenhum resultado para "${searchQuery}".` : "Nenhum pedido neste filtro."}
               </div>
             )}
           </div>
@@ -137,6 +175,10 @@ function Index() {
           onChatTargetChange={setChatTarget}
           onClose={() => setOpenCase(null)}
         />
+      )}
+
+      {showNewOrderModal && (
+        <NewOrderModal onClose={() => setShowNewOrderModal(false)} />
       )}
     </div>
   );
@@ -171,7 +213,24 @@ function RoleSwitcher({ role, onChange }: { role: Role; onChange: (r: Role) => v
   );
 }
 
-function Header({ role }: { role: Role }) {
+function Header({
+  role,
+  session,
+  onLogout,
+  searchQuery,
+  onSearch,
+}: {
+  role: Role;
+  session: AuthSession | null;
+  onLogout: () => void;
+  searchQuery: string;
+  onSearch: (q: string) => void;
+}) {
+  const initials = session?.name
+    ? session.name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
+    : "SR";
+  const displayName = session?.name?.split(" ")[0] ?? "Sofia";
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.02)]">
       <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-6 py-3 lg:px-10">
@@ -192,10 +251,14 @@ function Header({ role }: { role: Role }) {
           <input
             className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none"
             placeholder="Buscar paciente, dentista, laboratório ou ID do caso..."
+            value={searchQuery}
+            onChange={(e) => onSearch(e.target.value)}
           />
-          <kbd className="hidden rounded border border-border bg-card px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline">
-            ⌘K
-          </kbd>
+          {searchQuery && (
+            <button onClick={() => onSearch("")} className="text-muted-foreground hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -204,15 +267,22 @@ function Header({ role }: { role: Role }) {
           </button>
           <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#0979b0] to-[#0cb7f2] text-[11px] font-semibold text-white">
-              SR
+              {initials}
             </div>
             <div className="leading-tight">
-              <div className="text-xs font-medium">Sofia R.</div>
+              <div className="text-xs font-medium">{displayName}</div>
               <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {role}
               </div>
             </div>
           </div>
+          <button
+            onClick={onLogout}
+            title="Sair"
+            className="rounded-full p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </header>
@@ -233,10 +303,12 @@ function QuickCards({
   role,
   activeFilter,
   onFilter,
+  onNewOrder,
 }: {
   role: Role;
   activeFilter: string | null;
   onFilter: (f: string | null) => void;
+  onNewOrder: () => void;
 }) {
   const cards: QuickCard[] = useMemo(() => {
     if (role === "MODERADOR") {
@@ -271,7 +343,7 @@ function QuickCards({
         return (
           <button
             key={c.key}
-            onClick={() => onFilter(c.filter === activeFilter ? null : c.filter)}
+            onClick={() => isPrimary ? onNewOrder() : onFilter(c.filter === activeFilter ? null : c.filter)}
             className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200 ${
               isPrimary
                 ? "border-primary bg-primary text-primary-foreground hover:opacity-95"
@@ -441,6 +513,236 @@ function StatusPill({ status }: { status: CaseOrder["status"] }) {
   );
 }
 
+function FileViewer3D({ order }: { order: CaseOrder }) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [activeView, setActiveView] = useState<"perspectiva" | "superior" | "lateral">("perspectiva");
+  const [rotationAngle, setRotationAngle] = useState(0);
+  const animRef = useRef<number | null>(null);
+  const isAnimating = useRef(false);
+
+  // Rotação contínua suave via requestAnimationFrame
+  useEffect(() => {
+    let start: number | null = null;
+    function step(ts: number) {
+      if (start === null) start = ts;
+      const elapsed = ts - start;
+      setRotationAngle((elapsed / 80) % 360);
+      animRef.current = requestAnimationFrame(step);
+    }
+    animRef.current = requestAnimationFrame(step);
+    return () => {
+      if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
+  function handleDownload() {
+    if (downloading || downloaded) return;
+    setDownloading(true);
+    setTimeout(() => {
+      setDownloading(false);
+      setDownloaded(true);
+    }, 2200);
+  }
+
+  const fileName = `${order.id}_${order.patient.replace(/\s/g, "_")}_v3.stl`;
+  const fileSize = "14,8 MB";
+  const vertices = "248.502";
+  const faces = "124.301";
+
+  const viewAngles: Record<"perspectiva" | "superior" | "lateral", { rotX: number; label: string }> = {
+    perspectiva: { rotX: -18, label: "Perspectiva" },
+    superior:    { rotX: -90, label: "Superior" },
+    lateral:     { rotX: 0,   label: "Lateral" },
+  };
+
+  const currentRotX = viewAngles[activeView].rotX;
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-white/5 bg-[#0d0f12]">
+      {/* Viewport principal */}
+      <div className="relative h-72 w-full select-none overflow-hidden">
+        {/* Grade de fundo */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(9,121,176,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(9,121,176,0.06) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        {/* Radial glow central */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_55%,rgba(12,183,242,0.07),transparent)]" />
+
+        {/* Eixos XYZ */}
+        <div className="absolute bottom-10 left-5 flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#ff5f5f]">
+            <span className="h-px w-5 bg-[#ff5f5f]" />X
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#5fff8f]">
+            <span className="h-px w-5 bg-[#5fff8f]" />Y
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#5fb8ff]">
+            <span className="h-px w-5 bg-[#5fb8ff]" />Z
+          </span>
+        </div>
+
+        {/* Modelo 3D simulado — dente com rotação */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative"
+            style={{
+              transform: `rotateY(${rotationAngle}deg) rotateX(${currentRotX}deg)`,
+              transformStyle: "preserve-3d",
+              transition: "transform 0.4s ease",
+            }}
+          >
+            {/* Corpo do dente — face frontal */}
+            <div
+              className="h-36 w-[88px] rounded-[42%_42%_48%_48%/58%_58%_42%_42%]"
+              style={{
+                background: "linear-gradient(160deg, rgba(255,255,255,0.97) 0%, rgba(220,235,255,0.85) 45%, rgba(180,210,240,0.55) 100%)",
+                boxShadow: "0 0 0 1.5px rgba(12,183,242,0.35), 0 20px 50px -10px rgba(12,183,242,0.25), inset 0 2px 4px rgba(255,255,255,0.9)",
+                backfaceVisibility: "hidden",
+              }}
+            />
+            {/* Raízes */}
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
+              <div
+                className="h-8 w-4 rounded-b-full"
+                style={{
+                  background: "linear-gradient(180deg, rgba(200,220,240,0.8) 0%, rgba(160,185,215,0.4) 100%)",
+                  boxShadow: "0 0 0 1px rgba(12,183,242,0.2)",
+                }}
+              />
+              <div
+                className="h-9 w-4 rounded-b-full"
+                style={{
+                  background: "linear-gradient(180deg, rgba(200,220,240,0.8) 0%, rgba(160,185,215,0.4) 100%)",
+                  boxShadow: "0 0 0 1px rgba(12,183,242,0.2)",
+                }}
+              />
+            </div>
+            {/* Sombra no chão */}
+            <div className="absolute -bottom-9 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-[#0cb7f2]/10 blur-lg" />
+          </div>
+        </div>
+
+        {/* Tag superior esquerda — tipo de arquivo */}
+        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md border border-white/8 bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#0cb7f2]" />
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-white/80">STL · Malha 3D</span>
+        </div>
+
+        {/* Controles de câmera */}
+        <div className="absolute right-3 top-3 flex gap-1">
+          {[Move3d, RotateCw, ZoomIn, ZoomOut].map((Ic, i) => (
+            <button
+              key={i}
+              className="rounded-md border border-white/8 bg-black/40 p-1.5 text-white/60 backdrop-blur-sm transition hover:border-[#0cb7f2]/40 hover:bg-[#0cb7f2]/10 hover:text-[#0cb7f2]"
+            >
+              <Ic className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
+
+        {/* Alternância de ângulo de câmera */}
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/8 bg-black/50 p-1 backdrop-blur-sm">
+          {(["perspectiva", "superior", "lateral"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setActiveView(v)}
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
+                activeView === v
+                  ? "bg-[#0cb7f2] text-[#0d0f12]"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              {viewAngles[v].label}
+            </button>
+          ))}
+        </div>
+
+        {/* Metadados técnicos */}
+        <div className="absolute right-3 bottom-3 flex flex-col items-end gap-0.5">
+          <span className="font-mono text-[9px] text-white/35">Vértices: {vertices}</span>
+          <span className="font-mono text-[9px] text-white/35">Faces: {faces}</span>
+          <span className="font-mono text-[9px] text-white/35">Escala 1:1 mm</span>
+        </div>
+      </div>
+
+      {/* Rodapé — arquivo + download */}
+      <div className="flex items-center justify-between gap-4 border-t border-white/5 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[#0979b0]/20 text-[#0cb7f2]">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-[11px] font-semibold text-white/80">{fileName}</p>
+              <p className="text-[10px] text-white/40">{fileSize} · Versão 3 · Aprovado em 28 jun</p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+            downloaded
+              ? "bg-[#1a3a2a] text-[#4ade80] cursor-default"
+              : downloading
+              ? "cursor-wait bg-[#0979b0]/30 text-[#0cb7f2]/60"
+              : "bg-[#0979b0] text-white hover:bg-[#0cb7f2] hover:shadow-[0_0_16px_rgba(12,183,242,0.4)]"
+          }`}
+        >
+          {downloaded ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Arquivo salvo
+            </>
+          ) : downloading ? (
+            <>
+              <RotateCw className="h-3.5 w-3.5 animate-spin" />
+              Preparando...
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M7.25 1a.75.75 0 011.5 0v7.19l2.47-2.47a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0L3.72 6.78a.75.75 0 111.06-1.06l2.47 2.47V1z" />
+                <path d="M1.5 11.75A.75.75 0 012.25 11h11.5a.75.75 0 010 1.5H2.25a.75.75 0 01-.75-.75z" />
+              </svg>
+              Baixar Arquivo 3D para Impressão
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface ChatMessage {
+  id: number;
+  from: string;
+  side: "left" | "right";
+  text: string;
+  at: string;
+}
+
+function getInitialMessages(order: CaseOrder, role: Role, chatTarget: "DENTISTA" | "PROTETICO"): ChatMessage[] {
+  const counterpart = role === "MODERADOR"
+    ? (chatTarget === "DENTISTA" ? order.dentist : order.lab)
+    : "Moderação Aurora";
+  const isAjuste = order.status === "ajuste";
+  return [
+    { id: 1, from: counterpart, side: "left", text: isAjuste ? "Precisamos revisar a oclusão do caso. O dentista sinalizou interferência na distal." : "Bom dia! Recebemos o escaneamento intraoral. Tudo certo para prosseguir.", at: "09:14" },
+    { id: 2, from: "Você", side: "right", text: isAjuste ? "Entendido. Vou solicitar ajuste ao laboratório e retorno em 24h." : "Perfeito. Pode vincular ao laboratório e iniciar o design.", at: "09:16" },
+    { id: 3, from: counterpart, side: "left", text: "Confirmado! Já atualizei o status no sistema.", at: "09:22" },
+  ];
+}
+
 function CaseDrawer({
   order,
   role,
@@ -454,6 +756,62 @@ function CaseDrawer({
   onChatTargetChange: (t: "DENTISTA" | "PROTETICO") => void;
   onClose: () => void;
 }) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() =>
+    getInitialMessages(order, role, chatTarget)
+  );
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Recria mensagens quando muda o target (moderador trocando de conversa)
+  useEffect(() => {
+    setMessages(getInitialMessages(order, role, chatTarget));
+  }, [chatTarget, order, role]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function sendMessage() {
+    const text = inputText.trim();
+    if (!text) return;
+
+    const counterpart = role === "MODERADOR"
+      ? (chatTarget === "DENTISTA" ? order.dentist : order.lab)
+      : "Moderação Aurora";
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const newMsg: ChatMessage = {
+      id: Date.now(),
+      from: "Você",
+      side: "right",
+      text,
+      at: timeStr,
+    };
+    setMessages((prev) => [...prev, newMsg]);
+    setInputText("");
+
+    // Simula resposta automática após 1.5s
+    setTimeout(() => {
+      const autoReplies = [
+        "Recebido! Vou verificar e retorno em breve.",
+        "Certo, anotado. Seguindo com o processo.",
+        "Perfeito, obrigado pela atualização!",
+        "Ok, estamos acompanhando o caso.",
+        "Entendido. Qualquer novidade, avisamos aqui.",
+      ];
+      const reply: ChatMessage = {
+        id: Date.now() + 1,
+        from: counterpart,
+        side: "left",
+        text: autoReplies[Math.floor(Math.random() * autoReplies.length)],
+        at: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes() + 1).padStart(2, "0")}`,
+      };
+      setMessages((prev) => [...prev, reply]);
+    }, 1500);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex">
       <div
@@ -481,45 +839,8 @@ function CaseDrawer({
         <div className="flex-1 overflow-y-auto">
           {/* 3D Viewer */}
           <section className="px-6 pt-5">
-            <SectionHeader title="Visualização 3D" subtitle="Arquivo STL/OBJ — escaneamento intraoral" />
-            <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-[oklch(0.18_0_0)]">
-              <div className="relative h-64 w-full">
-                {/* Grid */}
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-                {/* Fake tooth shape */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative">
-                    <div className="h-32 w-24 rounded-[40%_40%_45%_45%/55%_55%_45%_45%] bg-gradient-to-b from-white/95 via-white/80 to-white/40 shadow-[0_30px_60px_-20px_rgba(255,255,255,0.3)]" />
-                    <div className="absolute -bottom-2 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-white/20 blur-md" />
-                  </div>
-                </div>
-                <div className="absolute left-3 top-3 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/70">
-                  Viewport · STL
-                </div>
-                <div className="absolute right-3 top-3 flex gap-1">
-                  {[Move3d, RotateCw, ZoomIn, ZoomOut].map((Ic, i) => (
-                    <button
-                      key={i}
-                      className="rounded-md border border-white/10 bg-white/5 p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Ic className="h-3.5 w-3.5" />
-                    </button>
-                  ))}
-                </div>
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[10px] text-white/50">
-                  <span>Vértices: 248.502</span>
-                  <span>Faces: 124.301</span>
-                  <span>Escala 1:1 mm</span>
-                </div>
-              </div>
-            </div>
+            <SectionHeader title="Arquivo 3D do Caso" subtitle="Escaneamento intraoral · pronto para impressão" />
+            <FileViewer3D order={order} />
           </section>
 
           {/* History */}
@@ -588,35 +909,11 @@ function CaseDrawer({
             )}
 
             <div className="mt-3 rounded-xl border border-border bg-background">
-              <div className="flex flex-col gap-3 p-4">
-                <ChatMsg
-                  from={role === "MODERADOR" ? (chatTarget === "DENTISTA" ? "Dr. Henrique" : "Lab Cerâmica Prime") : "Moderação Aurora"}
-                  side="left"
-                  text={
-                    role === "MODERADOR"
-                      ? chatTarget === "DENTISTA"
-                        ? "Bom dia, conseguem confirmar a cor A2 no protocolo cerâmico?"
-                        : "Material entregue ontem, aguardando triagem na sede."
-                      : "Olá, recebemos a proposta v3 do laboratório. Pode validar a oclusão?"
-                  }
-                  at="09:14"
-                />
-                <ChatMsg
-                  from="Você"
-                  side="right"
-                  text={
-                    role === "MODERADOR"
-                      ? "Confirmado A2. Sigam com a usinagem cerâmica."
-                      : "Validado. Pode seguir para triagem física."
-                  }
-                  at="09:16"
-                />
-                <ChatMsg
-                  from={role === "MODERADOR" ? (chatTarget === "DENTISTA" ? "Dr. Henrique" : "Lab Cerâmica Prime") : "Moderação Aurora"}
-                  side="left"
-                  text="Perfeito, anexei o relatório do escaneamento intraoral atualizado."
-                  at="09:22"
-                />
+              <div className="flex max-h-64 flex-col gap-3 overflow-y-auto p-4">
+                {messages.map((msg) => (
+                  <ChatMsg key={msg.id} from={msg.from} side={msg.side} text={msg.text} at={msg.at} />
+                ))}
+                <div ref={messagesEndRef} />
               </div>
               <div className="flex items-center gap-2 border-t border-border p-3">
                 <input
@@ -624,8 +921,16 @@ function CaseDrawer({
                   placeholder={`Mensagem para ${
                     role === "MODERADOR" ? (chatTarget === "DENTISTA" ? "Dentista" : "Protético") : "Moderação"
                   }...`}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.nativeEvent.isComposing) sendMessage();
+                  }}
                 />
-                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90">
+                <button
+                  onClick={sendMessage}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90"
+                >
                   <Send className="h-4 w-4" />
                 </button>
               </div>
@@ -633,7 +938,7 @@ function CaseDrawer({
 
             {role !== "MODERADOR" && (
               <p className="mt-2 text-[11px] text-muted-foreground">
-                🔒 Os dados de contato da contraparte são preservados pela moderação Aurora.
+                Os dados de contato da contraparte são preservados pela moderação Aurora.
               </p>
             )}
           </section>
@@ -669,6 +974,167 @@ function ChatMsg({ from, side, text, at }: { from: string; side: "left" | "right
         >
           {text}
         </div>
+      </div>
+    </div>
+  );
+}
+
+const PROSTHESIS_TYPES = [
+  "Prótese fixa cerâmica",
+  "Coroa unitária em zircônia",
+  "Protocolo cerâmico superior",
+  "Faceta de porcelana",
+  "Prótese parcial removível",
+  "Coroa sobre implante",
+  "Overdenture sobre implantes",
+  "Prótese total (bimaxilar)",
+];
+
+const LABS = ["Lab Cerâmica Prime", "Odonto Digital SP", "ProArt Laboratório", "Zircônia Tech Lab"];
+
+function NewOrderModal({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [patientName, setPatientName] = useState("");
+  const [prosthesisType, setProsthesisType] = useState("");
+  const [selectedLab, setSelectedLab] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (step < 3) {
+      setStep((s) => (s + 1) as 2 | 3);
+      return;
+    }
+    setSubmitted(true);
+    setTimeout(onClose, 2000);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-2xl bg-card shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight">Novo Pedido de Prótese</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Passo {step} de 3</p>
+          </div>
+          <button onClick={onClose} className="rounded-full p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Progress */}
+        <div className="flex gap-1 px-6 pt-4">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full transition-all ${
+                s <= step ? "bg-primary" : "bg-border"
+              }`}
+            />
+          ))}
+        </div>
+
+        {submitted ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e6f7ff]">
+              <CheckCircle2 className="h-7 w-7 text-primary" />
+            </div>
+            <div className="text-base font-semibold">Pedido enviado com sucesso!</div>
+            <div className="text-sm text-muted-foreground">O laboratório será notificado e o caso aparecerá no pipeline em breve.</div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="px-6 py-5">
+            {step === 1 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Dados do Paciente</h3>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">Nome completo do paciente</label>
+                  <input
+                    required
+                    value={patientName}
+                    onChange={(e) => setPatientName(e.target.value)}
+                    placeholder="Ex: Maria Fernanda Santos"
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">Tipo de prótese</label>
+                  <select
+                    required
+                    value={prosthesisType}
+                    onChange={(e) => setProsthesisType(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  >
+                    <option value="">Selecione o tipo...</option>
+                    {PROSTHESIS_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+            {step === 2 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Escolha o Laboratório</h3>
+                <div className="space-y-2">
+                  {LABS.map((lab) => (
+                    <button
+                      key={lab}
+                      type="button"
+                      onClick={() => setSelectedLab(lab)}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition ${
+                        selectedLab === lab ? "border-primary bg-[#e6f7ff] text-primary" : "border-border bg-background hover:border-primary/40"
+                      }`}
+                    >
+                      <div className={`h-3 w-3 rounded-full border-2 ${selectedLab === lab ? "border-primary bg-primary" : "border-border"}`} />
+                      {lab}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {step === 3 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Observações Clínicas</h3>
+                <div className="rounded-xl border border-border bg-background p-3.5 text-xs text-muted-foreground">
+                  <strong className="text-foreground">Resumo:</strong> {patientName} — {prosthesisType} — {selectedLab}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">Observações para o laboratório</label>
+                  <textarea
+                    rows={4}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Cor dental, considerações oclusais, arquivos de referência, etc."
+                    className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-between">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => (s - 1) as 1 | 2)}
+                  className="text-sm text-muted-foreground transition hover:text-foreground"
+                >
+                  Voltar
+                </button>
+              ) : <span />}
+              <button
+                type="submit"
+                disabled={step === 2 && !selectedLab}
+                className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+              >
+                {step === 3 ? "Enviar Pedido" : "Continuar"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
