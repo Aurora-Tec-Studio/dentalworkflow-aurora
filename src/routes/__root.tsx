@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "DentalWorkFlow" },
+      { name: "description", content: "Acompenhe Solicitações Em Tempo Real" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "DentalWorkFlow" },
+      { property: "og:description", content: "Acompenhe Solicitações Em Tempo Real" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "DentalWorkFlow" },
+      { name: "twitter:description", content: "Acompenhe Solicitações Em Tempo Real" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e9b6d688-d097-4232-b08a-1114ddb5e88b/id-preview-5c5898a7--e84f4a40-6162-4e52-b185-38b19fc16f79.lovable.app-1782757319469.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e9b6d688-d097-4232-b08a-1114ddb5e88b/id-preview-5c5898a7--e84f4a40-6162-4e52-b185-38b19fc16f79.lovable.app-1782757319469.png" },
     ],
     links: [
       {
