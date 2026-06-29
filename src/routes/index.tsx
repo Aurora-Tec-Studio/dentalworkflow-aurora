@@ -49,6 +49,7 @@ interface CaseOrder {
   sentAt: string;
   step: StepIndex; // current completed step index
   status: "novo" | "producao" | "triagem" | "concluido" | "ajuste" | "analise" | "caminho" | "rede";
+  messages: string;
 }
 
 const STEPS = [
@@ -60,12 +61,12 @@ const STEPS = [
 ];
 
 const ORDERS: CaseOrder[] = [
-  { id: "#1024", patient: "Marina Albuquerque", dentist: "Dr. Henrique Vasques", lab: "Lab Cerâmica Prime", type: "Prótese fixa cerâmica — 3 elementos", sentAt: "28 jun, 09:14", step: 0, status: "novo" },
-  { id: "#1025", patient: "Carlos Eduardo Lima", dentist: "Dra. Beatriz Monteiro", lab: "Odonto Digital SP", type: "Coroa unitária em zircônia", sentAt: "27 jun, 16:42", step: 1, status: "producao" },
-  { id: "#1026", patient: "Ana Paula Ribeiro", dentist: "Dr. Felipe Andrade", lab: "ProArt Laboratório", type: "Protocolo cerâmico superior", sentAt: "27 jun, 11:08", step: 2, status: "producao" },
-  { id: "#1027", patient: "Jorge Mendes", dentist: "Dra. Camila Tavares", lab: "Lab Cerâmica Prime", type: "Faceta de porcelana — anteriores", sentAt: "26 jun, 14:30", step: 3, status: "triagem" },
-  { id: "#1028", patient: "Renata Soares", dentist: "Dr. Henrique Vasques", lab: "Odonto Digital SP", type: "Prótese parcial removível", sentAt: "25 jun, 10:55", step: 4, status: "concluido" },
-  { id: "#1029", patient: "Pedro Henrique Costa", dentist: "Dra. Beatriz Monteiro", lab: "ProArt Laboratório", type: "Coroa sobre implante — molar inferior", sentAt: "24 jun, 17:20", step: 2, status: "ajuste" },
+  { id: "#1024", patient: "Marina Albuquerque", dentist: "Dr. Henrique Vasques", lab: "Lab Cerâmica Prime", type: "Prótese fixa cerâmica — 3 elementos", sentAt: "28 jun, 09:14", step: 0, status: "novo", messages: "5 mensagens · última há 4 min" },
+  { id: "#1025", patient: "Carlos Eduardo Lima", dentist: "Dra. Beatriz Monteiro", lab: "Odonto Digital SP", type: "Coroa unitária em zircônia", sentAt: "27 jun, 16:42", step: 1, status: "producao", messages: "Sem mensagens recentes" },
+  { id: "#1026", patient: "Ana Paula Ribeiro", dentist: "Dr. Felipe Andrade", lab: "ProArt Laboratório", type: "Protocolo cerâmico superior", sentAt: "27 jun, 11:08", step: 2, status: "producao", messages: "8 mensagens · última há 23 min" },
+  { id: "#1027", patient: "Jorge Mendes", dentist: "Dra. Camila Tavares", lab: "Lab Cerâmica Prime", type: "Faceta de porcelana — anteriores", sentAt: "26 jun, 14:30", step: 3, status: "triagem", messages: "2 mensagens · última há 1 hora" },
+  { id: "#1028", patient: "Renata Soares", dentist: "Dr. Henrique Vasques", lab: "Odonto Digital SP", type: "Prótese parcial removível", sentAt: "25 jun, 10:55", step: 4, status: "concluido", messages: "Conversa encerrada · 14 mensagens" },
+  { id: "#1029", patient: "Pedro Henrique Costa", dentist: "Dra. Beatriz Monteiro", lab: "ProArt Laboratório", type: "Coroa sobre implante — molar inferior", sentAt: "24 jun, 17:20", step: 2, status: "ajuste", messages: "7 mensagens · última há 2 min" },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -144,17 +145,18 @@ function Index() {
 function RoleSwitcher({ role, onChange }: { role: Role; onChange: (r: Role) => void }) {
   const roles: Role[] = ["MODERADOR", "DENTISTA", "PROTETICO"];
   return (
-    <div className="border-b border-border bg-[oklch(0.97_0.002_247)]">
-      <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-6 py-2 lg:px-10">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Modo de simulação
+    <div className="border-b border-border/60 bg-card/70 backdrop-blur">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-end gap-2 px-6 py-1.5 lg:px-10">
+        <span className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+          <span className="h-1 w-1 rounded-full bg-[#0cb7f2]" />
+          Dev · perfil
         </span>
-        <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+        <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-background/60 p-0.5">
           {roles.map((r) => (
             <button
               key={r}
               onClick={() => onChange(r)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide transition ${
                 role === r
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground"
@@ -164,9 +166,6 @@ function RoleSwitcher({ role, onChange }: { role: Role; onChange: (r: Role) => v
             </button>
           ))}
         </div>
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          MVP — alterne perfis para inspecionar permissões e fluxos
-        </span>
       </div>
     </div>
   );
@@ -312,8 +311,18 @@ function QuickCards({
 }
 
 function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) {
+  const isAlert = order.status === "ajuste";
   return (
-    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+    <div
+      className={`group relative rounded-2xl border bg-card p-5 transition-all hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)] ${
+        isAlert
+          ? "border-[#f5a26333] bg-[linear-gradient(180deg,#fff8f3_0%,#ffffff_55%)] shadow-[0_0_0_1px_rgba(245,162,99,0.18)]"
+          : "border-border hover:border-primary/25"
+      }`}
+    >
+      {isAlert && (
+        <span className="absolute left-0 top-5 h-8 w-[3px] rounded-r-full bg-[#f59e0b]" />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -334,13 +343,13 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
       </div>
 
       <div className="mt-5">
-        <Stepper current={order.step} />
+        <Stepper current={order.step} alert={isAlert} />
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <MessageSquare className="h-3.5 w-3.5" />
-          <span>3 mensagens · última há 12 min</span>
+          <span>{order.messages}</span>
         </div>
         <button
           onClick={onOpen}
@@ -354,7 +363,8 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
   );
 }
 
-function Stepper({ current }: { current: StepIndex }) {
+function Stepper({ current, alert = false }: { current: StepIndex; alert?: boolean }) {
+  const activeColor = alert ? "#f59e0b" : "#0cb7f2";
   return (
     <div className="flex items-center">
       {STEPS.map((label, i) => {
@@ -368,14 +378,23 @@ function Stepper({ current }: { current: StepIndex }) {
                   done
                     ? "border-[#0979b0] bg-[#0979b0]"
                     : active
-                      ? "border-[#0cb7f2] bg-[#0cb7f2]"
+                      ? "animate-pulse"
                       : "border-border bg-card"
                 }`}
+                style={
+                  active
+                    ? {
+                        borderColor: activeColor,
+                        backgroundColor: activeColor,
+                        boxShadow: `0 0 0 4px ${activeColor}33`,
+                      }
+                    : undefined
+                }
               >
                 {done ? (
                   <CheckCircle2 className="h-3 w-3 text-white" strokeWidth={3} />
                 ) : active ? (
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
                 ) : (
                   <span className="h-1.5 w-1.5 rounded-full bg-border" />
                 )}
