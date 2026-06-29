@@ -177,7 +177,7 @@ function Header({ role }: { role: Role }) {
     <header className="sticky top-0 z-30 border-b border-border bg-card shadow-[0_1px_0_rgba(0,0,0,0.02)]">
       <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-6 py-3 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <span className="text-sm font-bold">A</span>
           </div>
           <div className="leading-none">
@@ -204,7 +204,7 @@ function Header({ role }: { role: Role }) {
             <Bell className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-2.5 rounded-full border border-border bg-card py-1 pl-1 pr-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[oklch(0.6_0.05_250)] to-[oklch(0.4_0.05_280)] text-[11px] font-semibold text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#0979b0] to-[#0cb7f2] text-[11px] font-semibold text-white">
               SR
             </div>
             <div className="leading-tight">
@@ -275,10 +275,10 @@ function QuickCards({
             onClick={() => onFilter(c.filter === activeFilter ? null : c.filter)}
             className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200 ${
               isPrimary
-                ? "border-foreground bg-foreground text-background hover:opacity-95"
+                ? "border-primary bg-primary text-primary-foreground hover:opacity-95"
                 : isActive
-                  ? "border-foreground bg-card shadow-sm"
-                  : "border-border bg-card hover:border-foreground/30 hover:shadow-sm"
+                  ? "border-primary bg-card shadow-sm"
+                  : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
             }`}
           >
             <div className="flex items-start justify-between">
@@ -313,7 +313,7 @@ function QuickCards({
 
 function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) {
   return (
-    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-foreground/20 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
+    <div className="group rounded-2xl border border-border bg-card p-5 transition-all hover:border-primary/25 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -344,7 +344,7 @@ function OrderCard({ order, onOpen }: { order: CaseOrder; onOpen: () => void }) 
         </div>
         <button
           onClick={onOpen}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-foreground hover:bg-foreground hover:text-background"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary hover:bg-primary hover:text-primary-foreground"
         >
           Ver Detalhes e Mensagens
           <ChevronRight className="h-3.5 w-3.5" />
@@ -366,9 +366,9 @@ function Stepper({ current }: { current: StepIndex }) {
               <div
                 className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
                   done
-                    ? "border-[oklch(0.65_0.15_145)] bg-[oklch(0.65_0.15_145)]"
+                    ? "border-[#0979b0] bg-[#0979b0]"
                     : active
-                      ? "border-[oklch(0.78_0.15_85)] bg-[oklch(0.78_0.15_85)]"
+                      ? "border-[#0cb7f2] bg-[#0cb7f2]"
                       : "border-border bg-card"
                 }`}
               >
@@ -392,7 +392,7 @@ function Stepper({ current }: { current: StepIndex }) {
             {i < STEPS.length - 1 && (
               <div
                 className={`mx-2 h-px flex-1 transition ${
-                  done ? "bg-[oklch(0.65_0.15_145)]" : "bg-border"
+                  done ? "bg-[#0979b0]" : "bg-border"
                 }`}
               />
             )}
@@ -405,11 +405,11 @@ function Stepper({ current }: { current: StepIndex }) {
 
 function StatusPill({ status }: { status: CaseOrder["status"] }) {
   const map: Record<CaseOrder["status"], { label: string; cls: string }> = {
-    novo: { label: "Novo", cls: "bg-[oklch(0.94_0.04_240)] text-[oklch(0.4_0.12_240)]" },
-    producao: { label: "Em produção", cls: "bg-[oklch(0.95_0.05_85)] text-[oklch(0.4_0.12_75)]" },
-    triagem: { label: "Triagem", cls: "bg-[oklch(0.94_0.03_280)] text-[oklch(0.4_0.12_280)]" },
-    concluido: { label: "Concluído", cls: "bg-[oklch(0.94_0.05_145)] text-[oklch(0.35_0.12_145)]" },
-    ajuste: { label: "Ajuste", cls: "bg-[oklch(0.94_0.06_30)] text-[oklch(0.45_0.16_30)]" },
+    novo: { label: "Novo", cls: "bg-[#e6f7ff] text-[#0979b0]" },
+    producao: { label: "Em produção", cls: "bg-[#e0f7ff] text-[#0a6a99]" },
+    triagem: { label: "Triagem", cls: "bg-[#e6f0ff] text-[#0979b0]" },
+    concluido: { label: "Concluído", cls: "bg-[#d4f5ff] text-[#0979b0]" },
+    ajuste: { label: "Ajuste", cls: "bg-[#fff3e0] text-[#b35900]" },
     analise: { label: "Análise", cls: "bg-secondary text-foreground" },
     caminho: { label: "A caminho", cls: "bg-secondary text-foreground" },
     rede: { label: "Rede", cls: "bg-secondary text-foreground" },
@@ -523,9 +523,9 @@ function CaseDrawer({
                   <span
                     className={`flex h-6 w-10 items-center justify-center rounded-md font-mono text-[10px] font-semibold ${
                       h.tone === "good"
-                        ? "bg-[oklch(0.94_0.05_145)] text-[oklch(0.35_0.12_145)]"
+                        ? "bg-[#b6ffff] text-[#0979b0]"
                         : h.tone === "warn"
-                          ? "bg-[oklch(0.95_0.06_30)] text-[oklch(0.45_0.16_30)]"
+                          ? "bg-[#ffe8cc] text-[#b35900]"
                           : "bg-secondary text-muted-foreground"
                     }`}
                   >
@@ -606,7 +606,7 @@ function CaseDrawer({
                     role === "MODERADOR" ? (chatTarget === "DENTISTA" ? "Dentista" : "Protético") : "Moderação"
                   }...`}
                 />
-                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90">
+                <button className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90">
                   <Send className="h-4 w-4" />
                 </button>
               </div>
@@ -643,8 +643,8 @@ function ChatMsg({ from, side, text, at }: { from: string; side: "left" | "right
         <div className="text-[10px] text-muted-foreground">{from} · {at}</div>
         <div
           className={`rounded-2xl px-3.5 py-2 text-sm ${
-            side === "right"
-              ? "rounded-br-sm bg-foreground text-background"
+              side === "right"
+              ? "rounded-br-sm bg-primary text-primary-foreground"
               : "rounded-bl-sm border border-border bg-card text-foreground"
           }`}
         >
