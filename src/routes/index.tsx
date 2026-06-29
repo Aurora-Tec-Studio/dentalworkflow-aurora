@@ -513,6 +513,216 @@ function StatusPill({ status }: { status: CaseOrder["status"] }) {
   );
 }
 
+function FileViewer3D({ order }: { order: CaseOrder }) {
+  const [downloading, setDownloading] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [activeView, setActiveView] = useState<"perspectiva" | "superior" | "lateral">("perspectiva");
+  const [rotationAngle, setRotationAngle] = useState(0);
+  const animRef = useRef<number | null>(null);
+  const isAnimating = useRef(false);
+
+  // Rotação contínua suave via requestAnimationFrame
+  useEffect(() => {
+    let start: number | null = null;
+    function step(ts: number) {
+      if (start === null) start = ts;
+      const elapsed = ts - start;
+      setRotationAngle((elapsed / 80) % 360);
+      animRef.current = requestAnimationFrame(step);
+    }
+    animRef.current = requestAnimationFrame(step);
+    return () => {
+      if (animRef.current !== null) cancelAnimationFrame(animRef.current);
+    };
+  }, []);
+
+  function handleDownload() {
+    if (downloading || downloaded) return;
+    setDownloading(true);
+    setTimeout(() => {
+      setDownloading(false);
+      setDownloaded(true);
+    }, 2200);
+  }
+
+  const fileName = `${order.id}_${order.patient.replace(/\s/g, "_")}_v3.stl`;
+  const fileSize = "14,8 MB";
+  const vertices = "248.502";
+  const faces = "124.301";
+
+  const viewAngles: Record<"perspectiva" | "superior" | "lateral", { rotX: number; label: string }> = {
+    perspectiva: { rotX: -18, label: "Perspectiva" },
+    superior:    { rotX: -90, label: "Superior" },
+    lateral:     { rotX: 0,   label: "Lateral" },
+  };
+
+  const currentRotX = viewAngles[activeView].rotX;
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-white/5 bg-[#0d0f12]">
+      {/* Viewport principal */}
+      <div className="relative h-72 w-full select-none overflow-hidden">
+        {/* Grade de fundo */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(9,121,176,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(9,121,176,0.06) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        {/* Radial glow central */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_55%,rgba(12,183,242,0.07),transparent)]" />
+
+        {/* Eixos XYZ */}
+        <div className="absolute bottom-10 left-5 flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#ff5f5f]">
+            <span className="h-px w-5 bg-[#ff5f5f]" />X
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#5fff8f]">
+            <span className="h-px w-5 bg-[#5fff8f]" />Y
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[10px] font-bold text-[#5fb8ff]">
+            <span className="h-px w-5 bg-[#5fb8ff]" />Z
+          </span>
+        </div>
+
+        {/* Modelo 3D simulado — dente com rotação */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div
+            className="relative"
+            style={{
+              transform: `rotateY(${rotationAngle}deg) rotateX(${currentRotX}deg)`,
+              transformStyle: "preserve-3d",
+              transition: "transform 0.4s ease",
+            }}
+          >
+            {/* Corpo do dente — face frontal */}
+            <div
+              className="h-36 w-[88px] rounded-[42%_42%_48%_48%/58%_58%_42%_42%]"
+              style={{
+                background: "linear-gradient(160deg, rgba(255,255,255,0.97) 0%, rgba(220,235,255,0.85) 45%, rgba(180,210,240,0.55) 100%)",
+                boxShadow: "0 0 0 1.5px rgba(12,183,242,0.35), 0 20px 50px -10px rgba(12,183,242,0.25), inset 0 2px 4px rgba(255,255,255,0.9)",
+                backfaceVisibility: "hidden",
+              }}
+            />
+            {/* Raízes */}
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
+              <div
+                className="h-8 w-4 rounded-b-full"
+                style={{
+                  background: "linear-gradient(180deg, rgba(200,220,240,0.8) 0%, rgba(160,185,215,0.4) 100%)",
+                  boxShadow: "0 0 0 1px rgba(12,183,242,0.2)",
+                }}
+              />
+              <div
+                className="h-9 w-4 rounded-b-full"
+                style={{
+                  background: "linear-gradient(180deg, rgba(200,220,240,0.8) 0%, rgba(160,185,215,0.4) 100%)",
+                  boxShadow: "0 0 0 1px rgba(12,183,242,0.2)",
+                }}
+              />
+            </div>
+            {/* Sombra no chão */}
+            <div className="absolute -bottom-9 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-[#0cb7f2]/10 blur-lg" />
+          </div>
+        </div>
+
+        {/* Tag superior esquerda — tipo de arquivo */}
+        <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md border border-white/8 bg-black/50 px-2.5 py-1.5 backdrop-blur-sm">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#0cb7f2]" />
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-white/80">STL · Malha 3D</span>
+        </div>
+
+        {/* Controles de câmera */}
+        <div className="absolute right-3 top-3 flex gap-1">
+          {[Move3d, RotateCw, ZoomIn, ZoomOut].map((Ic, i) => (
+            <button
+              key={i}
+              className="rounded-md border border-white/8 bg-black/40 p-1.5 text-white/60 backdrop-blur-sm transition hover:border-[#0cb7f2]/40 hover:bg-[#0cb7f2]/10 hover:text-[#0cb7f2]"
+            >
+              <Ic className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
+
+        {/* Alternância de ângulo de câmera */}
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/8 bg-black/50 p-1 backdrop-blur-sm">
+          {(["perspectiva", "superior", "lateral"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setActiveView(v)}
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
+                activeView === v
+                  ? "bg-[#0cb7f2] text-[#0d0f12]"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              {viewAngles[v].label}
+            </button>
+          ))}
+        </div>
+
+        {/* Metadados técnicos */}
+        <div className="absolute right-3 bottom-3 flex flex-col items-end gap-0.5">
+          <span className="font-mono text-[9px] text-white/35">Vértices: {vertices}</span>
+          <span className="font-mono text-[9px] text-white/35">Faces: {faces}</span>
+          <span className="font-mono text-[9px] text-white/35">Escala 1:1 mm</span>
+        </div>
+      </div>
+
+      {/* Rodapé — arquivo + download */}
+      <div className="flex items-center justify-between gap-4 border-t border-white/5 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-[#0979b0]/20 text-[#0cb7f2]">
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-mono text-[11px] font-semibold text-white/80">{fileName}</p>
+              <p className="text-[10px] text-white/40">{fileSize} · Versão 3 · Aprovado em 28 jun</p>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className={`flex flex-shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+            downloaded
+              ? "bg-[#1a3a2a] text-[#4ade80] cursor-default"
+              : downloading
+              ? "cursor-wait bg-[#0979b0]/30 text-[#0cb7f2]/60"
+              : "bg-[#0979b0] text-white hover:bg-[#0cb7f2] hover:shadow-[0_0_16px_rgba(12,183,242,0.4)]"
+          }`}
+        >
+          {downloaded ? (
+            <>
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Arquivo salvo
+            </>
+          ) : downloading ? (
+            <>
+              <RotateCw className="h-3.5 w-3.5 animate-spin" />
+              Preparando...
+            </>
+          ) : (
+            <>
+              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                <path d="M7.25 1a.75.75 0 011.5 0v7.19l2.47-2.47a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0L3.72 6.78a.75.75 0 111.06-1.06l2.47 2.47V1z" />
+                <path d="M1.5 11.75A.75.75 0 012.25 11h11.5a.75.75 0 010 1.5H2.25a.75.75 0 01-.75-.75z" />
+              </svg>
+              Baixar Arquivo 3D para Impressão
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface ChatMessage {
   id: number;
   from: string;
@@ -629,45 +839,8 @@ function CaseDrawer({
         <div className="flex-1 overflow-y-auto">
           {/* 3D Viewer */}
           <section className="px-6 pt-5">
-            <SectionHeader title="Visualização 3D" subtitle="Arquivo STL/OBJ — escaneamento intraoral" />
-            <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-[oklch(0.18_0_0)]">
-              <div className="relative h-64 w-full">
-                {/* Grid */}
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-                    backgroundSize: "24px 24px",
-                  }}
-                />
-                {/* Fake tooth shape */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative">
-                    <div className="h-32 w-24 rounded-[40%_40%_45%_45%/55%_55%_45%_45%] bg-gradient-to-b from-white/95 via-white/80 to-white/40 shadow-[0_30px_60px_-20px_rgba(255,255,255,0.3)]" />
-                    <div className="absolute -bottom-2 left-1/2 h-3 w-20 -translate-x-1/2 rounded-full bg-white/20 blur-md" />
-                  </div>
-                </div>
-                <div className="absolute left-3 top-3 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-white/70">
-                  Viewport · STL
-                </div>
-                <div className="absolute right-3 top-3 flex gap-1">
-                  {[Move3d, RotateCw, ZoomIn, ZoomOut].map((Ic, i) => (
-                    <button
-                      key={i}
-                      className="rounded-md border border-white/10 bg-white/5 p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Ic className="h-3.5 w-3.5" />
-                    </button>
-                  ))}
-                </div>
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[10px] text-white/50">
-                  <span>Vértices: 248.502</span>
-                  <span>Faces: 124.301</span>
-                  <span>Escala 1:1 mm</span>
-                </div>
-              </div>
-            </div>
+            <SectionHeader title="Arquivo 3D do Caso" subtitle="Escaneamento intraoral · pronto para impressão" />
+            <FileViewer3D order={order} />
           </section>
 
           {/* History */}
