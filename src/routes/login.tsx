@@ -39,7 +39,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Painel esquerdo — marca */}
       <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-[#0979b0] p-12 lg:flex">
         {/* Padrão de grade sutil */}
@@ -100,7 +100,7 @@ function LoginPage() {
       </div>
 
       {/* Painel direito — formulário */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
         {/* Logo mobile */}
         <div className="mb-8 flex items-center gap-2 lg:hidden">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
