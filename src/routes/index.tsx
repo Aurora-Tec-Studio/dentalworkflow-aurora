@@ -49,6 +49,7 @@ interface CaseOrder {
   sentAt: string;
   step: StepIndex; // current completed step index
   status: "novo" | "producao" | "triagem" | "concluido" | "ajuste" | "analise" | "caminho" | "rede";
+  messages: string;
 }
 
 const STEPS = [
@@ -60,12 +61,12 @@ const STEPS = [
 ];
 
 const ORDERS: CaseOrder[] = [
-  { id: "#1024", patient: "Marina Albuquerque", dentist: "Dr. Henrique Vasques", lab: "Lab Cerâmica Prime", type: "Prótese fixa cerâmica — 3 elementos", sentAt: "28 jun, 09:14", step: 0, status: "novo" },
-  { id: "#1025", patient: "Carlos Eduardo Lima", dentist: "Dra. Beatriz Monteiro", lab: "Odonto Digital SP", type: "Coroa unitária em zircônia", sentAt: "27 jun, 16:42", step: 1, status: "producao" },
-  { id: "#1026", patient: "Ana Paula Ribeiro", dentist: "Dr. Felipe Andrade", lab: "ProArt Laboratório", type: "Protocolo cerâmico superior", sentAt: "27 jun, 11:08", step: 2, status: "producao" },
-  { id: "#1027", patient: "Jorge Mendes", dentist: "Dra. Camila Tavares", lab: "Lab Cerâmica Prime", type: "Faceta de porcelana — anteriores", sentAt: "26 jun, 14:30", step: 3, status: "triagem" },
-  { id: "#1028", patient: "Renata Soares", dentist: "Dr. Henrique Vasques", lab: "Odonto Digital SP", type: "Prótese parcial removível", sentAt: "25 jun, 10:55", step: 4, status: "concluido" },
-  { id: "#1029", patient: "Pedro Henrique Costa", dentist: "Dra. Beatriz Monteiro", lab: "ProArt Laboratório", type: "Coroa sobre implante — molar inferior", sentAt: "24 jun, 17:20", step: 2, status: "ajuste" },
+  { id: "#1024", patient: "Marina Albuquerque", dentist: "Dr. Henrique Vasques", lab: "Lab Cerâmica Prime", type: "Prótese fixa cerâmica — 3 elementos", sentAt: "28 jun, 09:14", step: 0, status: "novo", messages: "5 mensagens · última há 4 min" },
+  { id: "#1025", patient: "Carlos Eduardo Lima", dentist: "Dra. Beatriz Monteiro", lab: "Odonto Digital SP", type: "Coroa unitária em zircônia", sentAt: "27 jun, 16:42", step: 1, status: "producao", messages: "Sem mensagens recentes" },
+  { id: "#1026", patient: "Ana Paula Ribeiro", dentist: "Dr. Felipe Andrade", lab: "ProArt Laboratório", type: "Protocolo cerâmico superior", sentAt: "27 jun, 11:08", step: 2, status: "producao", messages: "8 mensagens · última há 23 min" },
+  { id: "#1027", patient: "Jorge Mendes", dentist: "Dra. Camila Tavares", lab: "Lab Cerâmica Prime", type: "Faceta de porcelana — anteriores", sentAt: "26 jun, 14:30", step: 3, status: "triagem", messages: "2 mensagens · última há 1 hora" },
+  { id: "#1028", patient: "Renata Soares", dentist: "Dr. Henrique Vasques", lab: "Odonto Digital SP", type: "Prótese parcial removível", sentAt: "25 jun, 10:55", step: 4, status: "concluido", messages: "Conversa encerrada · 14 mensagens" },
+  { id: "#1029", patient: "Pedro Henrique Costa", dentist: "Dra. Beatriz Monteiro", lab: "ProArt Laboratório", type: "Coroa sobre implante — molar inferior", sentAt: "24 jun, 17:20", step: 2, status: "ajuste", messages: "7 mensagens · última há 2 min" },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
